@@ -50,6 +50,7 @@ ui <- fluidPage(
           h2("Team Selection")
         ),
         card_body(
+          height = "250px",
           selectInput(
             inputId = "home_team",
             label = "Select Home Team",
