@@ -5,7 +5,7 @@ library(hms)
 library(bslib)
 library(vroom)
 
-# Data loading code remains the same
+# Data loading code same as before
 if (!exists("nfl_raw")) {
   if (file.exists("nfl_raw.fst")) {
     print("Reading from fst file")
@@ -38,7 +38,7 @@ if (!exists("nfl_raw")) {
 }
 
 # Set up a by-minute sequence in seconds
-time_seq <- seq(0, 900, by = 60)  # Numeric sequence in seconds
+time_seq <- seq(0, 900, by = 60)
 
 ui <- fluidPage(
   titlePanel("NFL Data Explorer"),
@@ -47,7 +47,7 @@ ui <- fluidPage(
       card(
         full_screen = TRUE,
         card_header(
-          h2("Team Selection")
+          h2("Select Teams")
         ),
         card_body(
           height = "250px",
@@ -71,7 +71,6 @@ ui <- fluidPage(
         )
       ),
 
-      # Time and quarter filters
       h2("Select a quarter of play"),
       sliderInput("qtr_slider", "Select Quarter (5 = Overtime):",
                   min = 1,
@@ -96,35 +95,39 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
 
-  # Store the team-filtered data
-  team_data <- reactiveValues(
-    data = nfl_raw |> head(100)  # Start with first 100 rows
+  # Store the filtered data in a container
+  init_filtered <- reactiveValues(
+    filtered_teams = NULL
   )
 
-  # Update team data when submit is clicked
+  # Update filtered teams on submit
   observeEvent(input$submit, {
+    # Start with all data
     filtered <- nfl_raw
 
     # Apply team filters
-    if (input$home_team != "All Teams") {
+    if (input$home_team != "All Teams" && input$away_team != "All Teams") {
+      filtered <- filtered |>
+        filter(home_team == input$home_team, away_team == input$away_team)
+    } else if (input$home_team != "All Teams") {
       filtered <- filtered |> filter(home_team == input$home_team)
-    }
-    if (input$away_team != "All Teams") {
+    } else if (input$away_team != "All Teams") {
       filtered <- filtered |> filter(away_team == input$away_team)
     }
 
-    team_data$data <- filtered
-  })
+    init_filtered$filtered_teams <- filtered
+  }, ignoreNULL = FALSE)
 
-  # Create reactive expression for time/quarter filtering
+  # Time/quarter filtering
   filtered_data <- reactive({
-    team_data$data |>
+
+    init_filtered$filtered_teams |>
       filter(qtr >= input$qtr_slider[1] & qtr <= input$qtr_slider[2]) |>
       filter(!is.na(time)) |>
       mutate(time_seconds = as.numeric(time)) |>
       filter(time_seconds >= input$time_slider) |>
       select(play_id, game_id, home_team, away_team, qtr, time, score_differential, yards_gained) |>
-      head(100)  # Still limiting to 100 rows for display
+      head(100)
   })
 
   # Update away team based on home team
@@ -153,13 +156,16 @@ server <- function(input, output, session) {
                       selected = if(input$home_team %in% home_choices) input$home_team else "All Teams")
   })
 
-  # Render time output
+  # Render time output underneath slider since slider values are seconds
+  #TODO: update slider values to mm:ss
   output$selected_time <- renderPrint({
     as_hms(input$time_slider)
   })
 
-  # Render table output using the filtered data
+  # Render table output. Require data to render
   output$qtr_table <- renderTable({
+    req(filtered_data())
+
     filtered_data() |>
       mutate(time = format(as_hms(time), "%M:%S"))
   })
