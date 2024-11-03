@@ -1,9 +1,11 @@
 library(tidyverse)
 library(shiny)
 library(fst)
+library(hms)
+library(bslib)
 library(vroom)
 
-# Data loading code same as before
+# Data loading code remains the same
 if (!exists("nfl_raw")) {
   if (file.exists("nfl_raw.fst")) {
     print("Reading from fst file")
@@ -35,3 +37,55 @@ if (!exists("nfl_raw")) {
   }
 }
 
+ui <- fluidPage(
+  titlePanel("NFL Data Explorer"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(
+        inputId = "home_team",
+        label = "Select Home Team",
+        choices = c("All Teams", sort(na.omit(unique(nfl_raw$home_team)))),
+        selected = "All Teams"
+      ),
+      selectInput(
+        inputId = "away_team",
+        label = "Select Away Team",
+        choices = c("All Teams", sort(na.omit(unique(nfl_raw$away_team)))),
+        selected = "All Teams"
+      ),
+      actionButton("submit", "Subset Data")
+    ),
+    mainPanel(
+      tableOutput("qtr_table")
+    )
+  )
+)
+
+server <- function(input, output, session) {
+
+  # Store the filtered data in a reactive value
+  v <- reactiveValues(
+    data = nfl_raw |> head(10)  # Start with first 10 rows
+  )
+
+  # Update the data when the button is clicked
+  observeEvent(input$submit, {
+    filtered <- nfl_raw
+
+    if (input$home_team != "All Teams") {
+      filtered <- filtered |> filter(home_team == input$home_team)
+    }
+    if (input$away_team != "All Teams") {
+      filtered <- filtered |> filter(away_team == input$away_team)
+    }
+
+    v$data <- filtered |> head(10)  # Just show first 10 rows of filtered data
+  })
+
+  # Render the table
+  output$qtr_table <- renderTable({
+    v$data
+  })
+}
+
+shinyApp(ui, server)
