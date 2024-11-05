@@ -174,11 +174,18 @@ server <- function(input, output, session) {
 
 
   # Render table output. Require data to render
-  output$qtr_table <- renderTable({
+  output$filtered_table <- DT::renderDataTable({
     req(filtered_data())
 
-    filtered_data() |>
-      mutate(time = format(as_hms(time), "%M:%S"))
+    DT::datatable(
+      filtered_data() |>
+        mutate(time = format(as_hms(time), "%M:%S")),
+      options = list(
+        pageLength = 20,
+        scrollX = TRUE
+      ),
+      class = 'cell-border stripe'
+    )
   })
 }
 
