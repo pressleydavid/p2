@@ -8,6 +8,7 @@ library(ggplot2)
 library(ggridges)
 library(viridis)
 library(gridExtra)
+library(DT)
 
 # Data loading code same as before
 if (!exists("nfl_raw")) {

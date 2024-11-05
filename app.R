@@ -27,10 +27,6 @@ ui <- fluidPage(
             selected = "All Teams"
           ),
           div(style = "margin-bottom: 20px;")
-        ),
-        card_footer(
-          actionButton("submit", "Subset Data",
-                       class = "btn-primary")
         )
       ),
 
@@ -48,10 +44,51 @@ ui <- fluidPage(
                   value = min(time_seq),
                   step = 60),
       h3("Selected time: "),
-      verbatimTextOutput("selected_time")
+      verbatimTextOutput("selected_time"),
+
+      div(style = "margin-top: 20px;",
+          actionButton("submit", "Subset Data",
+                       class = "btn-primary btn-lg btn-block")
+      )
     ),
+
+    # Added mainPanel here
     mainPanel(
-      tableOutput("qtr_table")
+      tabsetPanel(
+        tabPanel("About",
+                 h3("Purpose"),
+                 p("This app is used to explore NFL Data. The source of this data is from Kaggle",
+                   a(href = "https://www.kaggle.com/datasets/maxhorowitz/nflplaybyplay2009to2016/data",
+                     "Detailed NFL Play-by-Play Data 2009-2018",
+                     target = "_blank" ),
+                   p(a(href = "https://www.kaggle.com/datasets/maxhorowitz/nflplaybyplay2009to2016/download",
+                       "Download ",
+                       target = "_blank"),
+                     "the dataset as a zip file and place in your R project's working directory"),
+                   p("The sidebar allows you to select 2 teams, or all teams, as well as a range of Quarters and Time remaining in the selected quarter"),
+                   a(href = "https://www.nfl.com",
+                     img(src = "https://static.www.nfl.com/image/upload/v1554321393/league/nvfr7ogywskqrfaiu38m.svg",
+                         height = 150,
+                         alt = "NFL Logo"),
+                     target = "_blank")
+                 )
+        ),
+        tabPanel("Download",
+                 h3("Download Filtered Data"),
+                 p("This will download a CSV file containing the data filtered by:"),
+                 tags$ul(
+                   tags$li("Selected home and away teams"),
+                   tags$li("Selected quarter range"),
+                   tags$li("Selected time remaining")
+                 ),
+                 downloadButton('downloadData', 'Download CSV',
+                                class = "btn-primary"),
+                 hr(),
+                 h3("Preview of Filtered Data"),
+                 DT::dataTableOutput("filtered_table")
+        ),
+        tabPanel("Data Exploration")
+      )
     )
   )
 )
@@ -124,6 +161,17 @@ server <- function(input, output, session) {
   output$selected_time <- renderPrint({
     as_hms(input$time_slider)
   })
+
+
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste("nfl-data-", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(filtered_data(), file, row.names = FALSE)
+    }
+  )
+
 
   # Render table output. Require data to render
   output$qtr_table <- renderTable({
