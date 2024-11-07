@@ -68,12 +68,37 @@ final_score <- nfl_raw |>
   ))
   select(-qtr, -time, -quarter_seconds_remaining)
 
+team_win_pct <- final_score |>
+  group_by(winner) |>
+  count(homeaway_win) |>
+  group_by(winner) |>
+  mutate(percentage = n/sum(n) * 100)
+
 team_homeaway_wins <- final_score |>
   group_by(winner, homeaway_win) |>
   summarize(wins = n(), .groups = "drop") |>
   arrange(winner, desc(wins))
 
-
+#Pie chart
+ggplot(team_win_percentages, aes(x = "", y = percentage, fill = homeaway_win)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y", start = 0) +
+  facet_wrap(~winner) +
+  scale_fill_manual(values = c("Home" = "lightblue", "Away" = "pink")) +
+  labs(
+    title = "Home vs Away Win Distribution by Team",
+    fill = "Win Location"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    panel.grid = element_blank(),
+    strip.text = element_text(size = 8),
+    legend.position = "bottom"
+  ) +
+  geom_text(aes(label = sprintf("%.1f%%", percentage)),
+            position = position_stack(vjust = 0.5))
 
 #Bar chart
 ggplot(team_homeaway_wins, aes(x = winner, y = wins, fill = homeaway_win)) +
