@@ -1,3 +1,10 @@
+# ST558 Project 3
+# Purpose: Shiny app to explore NFL Play by Play data from 2009-2018
+# Course: ST558 Data Science for Statisticians
+# Date: 06-Nov-2024
+# Author: David Pressley
+# Data Source: Kaggle NFL Play by Play Dataset
+
 #Source the data loading
 library(tidyverse)
 library(shiny)
