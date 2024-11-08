@@ -10,6 +10,7 @@ source("load_data.R")
 # Set up a by-minute sequence in seconds
 time_seq <- seq(0, 900, by = 60)
 
+#Use fluidPage and Sidebar Layouts for data selectors (dropdowns and sliders)
 ui <- fluidPage(
   titlePanel("NFL Data Explorer"),
   sidebarLayout(
@@ -68,6 +69,7 @@ ui <- fluidPage(
       br()
     ),
 
+    #Main panel with About, Download, and Data Exploration
     mainPanel(
       tabsetPanel(
         tabPanel("About",
@@ -465,7 +467,7 @@ server <- function(input, output, session) {
       write.csv(filtered_data(), file, row.names = FALSE)
     }
   )
-
+  # Download handler for plots
   output$download_plot <- downloadHandler(
     filename = function() {
       paste0("nfl_plot_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")
