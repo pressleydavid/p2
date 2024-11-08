@@ -260,13 +260,13 @@ server <- function(input, output, session) {
     data <- filtered_data()
 
     # Create descriptive title based on selections
-    title_text <- if(input$group_var == "None") {
-      sprintf("Summary of %s", tools::toTitleCase(gsub("_", " ", input$numeric_var)))
-    } else {
-      sprintf("Summary of %s by %s",
-              tools::toTitleCase(gsub("_", " ", input$numeric_var)),
-              tools::toTitleCase(gsub("_", " ", input$group_var)))
-    }
+    # title_text <- if(input$group_var == "None") {
+    #   sprintf("Summary of %s", tools::toTitleCase(gsub("_", " ", input$numeric_var)))
+    # } else {
+    #   sprintf("Summary of %s by %s",
+    #           tools::toTitleCase(gsub("_", " ", input$numeric_var)),
+    #           tools::toTitleCase(gsub("_", " ", input$group_var)))
+    # }
 
     # Define summary stats function
     calc_summary_stats <- \(x) {
@@ -288,10 +288,8 @@ server <- function(input, output, session) {
       result <- result[, c("Group", "Mean", "Median", "SD", "Min", "Max")]
     }
 
-    # Add title as attribute
-    attr(result, "title") <- title_text
     result
-  }, caption = function(x) attr(x, "title"))
+  })
 
   # Categorical summary output
   output$categorical_summary <- renderTable({
