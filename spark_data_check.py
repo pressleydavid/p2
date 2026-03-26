@@ -67,3 +67,12 @@ class SparkDataCheck:
         else:
             self.df = self.df.dropDuplicates()
         return self
+
+    def check_boundaries(self, column, min_value=None, max_value=None):
+        """Check if values in a column are within specified boundaries.
+        Parameters:
+            - column (str): Column name to check
+        """
+        if not pandas.api.types.is_numeric_dtype(column):
+            print(f"Specified column is not numeric.")
+            return
