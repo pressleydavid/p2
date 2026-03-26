@@ -13,5 +13,41 @@ from pyspark.sql.types import *
 import pandas as pd
 
 class SparkDataCheck:
-    pass
+    """class wrapper for a Spark SQL DataFrame
+        - provides functionality for data validation and summarization.
+    """
+
+    def __init__(self, dataframe):
+        """Initialize with a Spark SQL DataFrame.
+           Parameters
+                - dataframe : pyspark.sql.DataFrame
+        """
+        self.df = dataframe
+
+    # ----------------------------------------------------------------
+    # Class methods for alternative constructors
+    # ----------------------------------------------------------------
+
+    @classmethod
+    def from_csv(cls, spark, path):
+        """Create an instance by reading a CSV file.
+        Parameters:
+            - spark (SparkSession): an active SparkSession
+            - path (string): Path to the CSV file
+        Return:
+            - SparkDataCheck: a new instance that wraps a DataFrame
+        """
+        pass
+
+    @classmethod
+    def from_pandas(cls, spark, pandas_df):
+        """Create an instance from a standard pandas DataFrame.
+        Parameters:
+            - spark (SparkSession): an active SparkSession
+            - pandas_df (pd.DataFrame): a pandas DataFrame
+        Return:
+            - SparkDataCheck: a new instance that wraps a DataFrame
+        """
+        pass
+
 
