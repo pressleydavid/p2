@@ -60,7 +60,7 @@ class SparkDataCheck:
             - subset (list of str, optional): Column names to consider for identifying duplicates.
               If None, considers all columns.
         Return:
-            - SparkDataCheck: self, with duplicates dropped from self.df
+            - SparkDataCheck (self): duplicates dropped from self.df
         """
         if subset is not None:
             self.df = self.df.dropDuplicates(subset)
