@@ -130,3 +130,39 @@ class SparkDataCheck:
         # Append the boolean column and return self for chaining
         self.df = self.df.withColumn(f"{col_name}_in_range", result_col)
         return self
+
+def check_levels(self, col_name, levels):
+    """Check if values in a string column are within a specified set.
+
+    Appends a boolean column named '{col_name}_in_levels' to the DataFrame.
+    NULL values in the original column produce NULL in the result.
+
+    Parameters:
+        col_name : str
+            Name of the string column to check.
+        levels : list
+            List of acceptable string values.
+
+    Returns:
+        self
+            Returns self for method chaining.
+    """
+    # Check if column is a string type (inline)
+    col_type = dict(self.df.dtypes).get(col_name, "")
+    if col_type != "string":
+        print(f"Column '{col_name}' is not a string column. No modification made.")
+        return self
+
+    # Build the condition
+    col = F.col(col_name)
+    condition = col.isin(levels)
+
+    # preserve NULLs
+    result_col = F.when(col.isNull(), None).otherwise(condition)
+
+    # Append the boolean column and return self for chaining
+    self.df = self.df.withColumn(f"{col_name}_in_levels", result_col)
+    return self
+
+
+
