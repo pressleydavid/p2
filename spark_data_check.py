@@ -48,6 +48,22 @@ class SparkDataCheck:
         Return:
             - SparkDataCheck: a new instance that wraps a DataFrame
         """
-        pass
+        return spark.createDataFrame(pandas_df)
 
+    # ----------------------------------------------------------------
+    # Validation methods (modify self.df, return self for chaining)
+    # ----------------------------------------------------------------
 
+    def drop_duplicates(self, subset=None):
+        """Drop duplicate rows from the DataFrame.
+        Parameters:
+            - subset (list of str, optional): Column names to consider for identifying duplicates.
+              If None, considers all columns.
+        Return:
+            - SparkDataCheck: self, with duplicates dropped from self.df
+        """
+        if subset is not None:
+            self.df = self.df.dropDuplicates(subset)
+        else:
+            self.df = self.df.dropDuplicates()
+        return self
