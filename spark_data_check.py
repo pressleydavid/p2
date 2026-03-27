@@ -18,9 +18,6 @@ class SparkDataCheck:
         - provides functionality for data validation and summarization.
     """
 
-    # Acceptable numeric types for range checks
-    NUMERIC_TYPES = {"int", "bigint", "long", "float", "double", "integer"}
-
     def __init__(self, dataframe):
         """Initialize with a Spark SQL DataFrame.
            Parameters
@@ -64,6 +61,46 @@ class SparkDataCheck:
             - SparkDataCheck: a new instance that wraps a DataFrame
         """
         return spark.createDataFrame(pandas_df)
+
+    # ----------------------------------------------------------------
+    # Helper method for type checking
+    # ----------------------------------------------------------------
+    def _is_numeric(self, col_name):
+        """Check if a column has a numeric data type."""
+        # Get the list of (column_name, type) tuples
+        type_list = self.df.dtypes
+
+        # turninto a dictionary so we can look up by column name
+        type_dict = dict(type_list)
+
+        # get type string for col_name
+        col_type = type_dict.get(col_name, "")
+
+        # Define what we consider numeric
+        numeric_types = {"int", "bigint", "long", "float", "double", "integer"}
+
+        # Check if our column's type is in that set
+        if col_type in numeric_types:
+            return True
+        else:
+            return False
+
+def _is_string(self, col_name):
+    """Check if a column has a string data type."""
+    # Get the list of (column_name, type) tuples
+    type_list = self.df.dtypes
+
+    # Turn it into a dictionary so we can look up by column name
+    type_dict = dict(type_list)
+
+    # Get the type string for our column
+    col_type = type_dict.get(col_name, "")
+
+    # Check if it's a string type
+    if col_type == "string":
+        return True
+    else:
+        return False
 
     # ----------------------------------------------------------------
     # Validation methods (modify self.df, return self for chaining)
