@@ -164,5 +164,23 @@ def check_levels(self, col_name, levels):
     self.df = self.df.withColumn(f"{col_name}_in_levels", result_col)
     return self
 
+def check_missing(self, col_name):
+    """Check if values in a column are NULL.
 
+    Appends a boolean column named '{col_name}_is_missing' to the DataFrame.
+
+    Parameters
+        col_name : str
+            Name of the column to check for missing values.
+
+    Returns:
+        self
+            Returns self for method chaining.
+    """
+    # No type checking. any column can have NULLs
+    result_col = F.col(col_name).isNull()
+
+    # Append the boolean column and return self for chaining
+    self.df = self.df.withColumn(f"{col_name}_is_missing", result_col)
+    return self
 
