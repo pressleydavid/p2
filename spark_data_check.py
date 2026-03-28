@@ -17,6 +17,7 @@ class SparkDataCheck:
     """class wrapper for a Spark SQL DataFrame
         - provides functionality for data validation and summarization.
     """
+    NUMERICTYPES = {"int", "bigint", "long", "float", "double", "integer"}
 
     def __init__(self, dataframe):
         """Initialize with a Spark SQL DataFrame.
@@ -85,22 +86,22 @@ class SparkDataCheck:
         else:
             return False
 
-def _is_string(self, col_name):
-    """Check if a column has a string data type."""
-    # Get the list of (column_name, type) tuples
-    type_list = self.df.dtypes
+    def _is_string(self, col_name):
+        """Check if a column has a string data type."""
+        # Get the list of (column_name, type) tuples
+        type_list = self.df.dtypes
 
-    # Turn it into a dictionary so we can look up by column name
-    type_dict = dict(type_list)
+        # Turn it into a dictionary so we can look up by column name
+        type_dict = dict(type_list)
 
-    # Get the type string for our column
-    col_type = type_dict.get(col_name, "")
+        # Get the type string for our column
+        col_type = type_dict.get(col_name, "")
 
-    # Check if it's a string type
-    if col_type == "string":
-        return True
-    else:
-        return False
+        # Check if it's a string type
+        if col_type == "string":
+            return True
+        else:
+            return False
 
     # ----------------------------------------------------------------
     # Validation methods (modify self.df, return self for chaining)
@@ -110,7 +111,7 @@ def _is_string(self, col_name):
         """Drop duplicate rows from the DataFrame.
         Parameters:
             - subset (list of str, optional): Column names to consider for identifying duplicates.
-              If None, considers all columns.
+                If None, considers all columns.
         Return:
             - SparkDataCheck (self): duplicates dropped from self.df
         """
@@ -168,56 +169,160 @@ def _is_string(self, col_name):
         self.df = self.df.withColumn(f"{col_name}_in_range", result_col)
         return self
 
-def check_levels(self, col_name, levels):
-    """Check if values in a string column are within a specified set.
+    def check_levels(self, col_name, levels):
+        """Check if values in a string column are within a specified set.
 
-    Appends a boolean column named '{col_name}_in_levels' to the DataFrame.
-    NULL values in the original column produce NULL in the result.
+        Appends a boolean column named '{col_name}_in_levels' to the DataFrame.
+        NULL values in the original column produce NULL in the result.
 
-    Parameters:
-        col_name : str
-            Name of the string column to check.
-        levels : list
-            List of acceptable string values.
+        Parameters:
+            col_name : str
+                Name of the string column to check.
+            levels : list
+                List of acceptable string values.
 
-    Returns:
-        self
-            Returns self for method chaining.
-    """
-    # Check if column is a string type (inline)
-    col_type = dict(self.df.dtypes).get(col_name, "")
-    if col_type != "string":
-        print(f"Column '{col_name}' is not a string column. No modification made.")
+        Returns:
+            self
+                Returns self for method chaining.
+        """
+        # Check if column is a string type (inline)
+        col_type = dict(self.df.dtypes).get(col_name, "")
+        if col_type != "string":
+            print(f"Column '{col_name}' is not a string column. No modification made.")
+            return self
+
+        # Build the condition
+        col = F.col(col_name)
+        condition = col.isin(levels)
+
+        # preserve NULLs
+        result_col = F.when(col.isNull(), None).otherwise(condition)
+
+        # Append the boolean column and return self for chaining
+        self.df = self.df.withColumn(f"{col_name}_in_levels", result_col)
         return self
 
-    # Build the condition
-    col = F.col(col_name)
-    condition = col.isin(levels)
+    def check_missing(self, col_name):
+        """Check if values in a column are NULL.
 
-    # preserve NULLs
-    result_col = F.when(col.isNull(), None).otherwise(condition)
+        Appends a boolean column named '{col_name}_is_missing' to the DataFrame.
 
-    # Append the boolean column and return self for chaining
-    self.df = self.df.withColumn(f"{col_name}_in_levels", result_col)
-    return self
+        Parameters
+            col_name : str
+                Name of the column to check for missing values.
 
-def check_missing(self, col_name):
-    """Check if values in a column are NULL.
+        Returns:
+            self
+                Returns self for method chaining.
+        """
+        # No type checking. any column can have NULLs
+        result_col = F.col(col_name).isNull()
 
-    Appends a boolean column named '{col_name}_is_missing' to the DataFrame.
+        # Append the boolean column and return self for chaining
+        self.df = self.df.withColumn(f"{col_name}_is_missing", result_col)
+        return self
+
+
+    # -------------------------------------------------------------------------------
+    # Summarization methods (return summary pandas DataFrames, do not modify self.df)
+    # -------------------------------------------------------------------------------
+
+def get_min_max(self, col_name=None, group_col=None):
+    """Report min and max of numeric columns, optionally grouped.
 
     Parameters
-        col_name : str
-            Name of the column to check for missing values.
+        col_name : str, optional
+            column name. Numeric. If None, all numeric columns are used.
+        group_col : str, optional
+            group by before computing min/max.
 
-    Returns:
-        self
-            Returns self for method chaining.
+    Returns
+        pandas.DataFrame or None
+            pandas DataFrame with min/max values, or None if
+            the specified column is not numeric.
     """
-    # No type checking. any column can have NULLs
-    result_col = F.col(col_name).isNull()
+    # case 1: column name provided
+    if col_name is not None:
+        # Check if column is numeric
+        col_type = dict(self.df.dtypes).get(col_name, "")
+        if col_type not in {"int", "bigint", "long", "float", "double", "integer"}:
+            print(f"Column '{col_name}' is not numeric.")
+            return None
 
-    # Append the boolean column and return self for chaining
-    self.df = self.df.withColumn(f"{col_name}_is_missing", result_col)
-    return self
+        # Build the aggregation expressions using F.min and F.max
+        # follows .groupBy().agg() pattern from the notes
+        agg_exprs = [
+            F.min(col_name).alias(f"{col_name}_min"),
+            F.max(col_name).alias(f"{col_name}_max")
+        ]
+
+        # If a grouping variable was provided, group first then aggregate
+        if group_col is not None:
+            result = self.df.groupBy(group_col).agg(*agg_exprs)
+        else:
+            # No grouping — just aggregate the whole DataFrame
+            result = self.df.agg(*agg_exprs)
+
+        # Convert to regular pandas before returning
+        return result.toPandas()
+
+    # case 2: No column specified, use all numeric columns
+    else:
+        # find all numeric columns by checking dtypes
+        numeric_types = {"int", "bigint", "long", "float", "double", "integer"}
+        numeric_cols = []
+        for name, dtype in self.df.dtypes:
+            if dtype in numeric_types:
+                numeric_cols.append(name)
+
+        # no numeric columns exist
+        if len(numeric_cols) == 0:
+            print("No numeric columns found in the DataFrame.")
+            return None
+
+        # case 2a: All numeric columns, no grouping
+        if group_col is None:
+            # build list of agg expressions for all numeric cols
+            agg_exprs = []
+            for c in numeric_cols:
+                agg_exprs.append(F.min(c).alias(f"{c}_min"))
+                agg_exprs.append(F.max(c).alias(f"{c}_max"))
+
+            # one .agg() call with all expressions, then toPandas
+            result = self.df.agg(*agg_exprs)
+            return result.toPandas()
+
+        # case 2b: All numeric columns, with grouping
+        # tricky part from hint
+        # difficult to do one .agg() for all columns and keep
+        # so do one groupBy().agg() per column
+        # then merge the resulting pandas DataFrames together.
+        else:
+            pandas_dfs = []
+            for c in numeric_cols:
+                # for each numeric column, groupBy and get min/max
+                agg_exprs = [
+                    F.min(c).alias(f"{c}_min"),
+                    F.max(c).alias(f"{c}_max")
+                ]
+                one_result = (
+                    self.df
+                    .groupBy(group_col)
+                    .agg(*agg_exprs)
+                    .toPandas()
+                )
+                pandas_dfs.append(one_result)
+
+            # reduce with pd.merge to combine all the DataFrames
+            # into one wide DataFrame, joining on the group column.
+            # reduce takes a function and a list, applying the function
+            # cumulatively: merge(merge(df1, df2), df3), etc.
+            combined = reduce(
+                lambda a, b: pd.merge(a, b, on=group_col),
+                pandas_dfs
+            )
+            return combined
+
+
+
 
