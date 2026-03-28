@@ -323,6 +323,51 @@ def get_min_max(self, col_name=None, group_col=None):
             )
             return combined
 
+def get_counts(self, col1, col2=None):
+    """Report counts for one or two string columns.
+
+    Parameters
+        col1 : str
+            First string column (required).
+        col2 : str, optional
+            Second string column for cross-tabulation.
+
+    Returns
+        pandas.DataFrame or None
+            A pandas DataFrame with counts, or None if columns
+            are not strings.
+    """
+    # check if col1 is a string column
+    col1_type = dict(self.df.dtypes).get(col1, "")
+    if col1_type != "string":
+        print(f"Column '{col1}' is not a string column.")
+        return None
+
+    # if col2 was provided, check that one too
+    if col2 is not None:
+        col2_type = dict(self.df.dtypes).get(col2, "")
+        if col2_type != "string":
+            print(f"Column '{col2}' is not a string column.")
+            return None
+
+        # two-column counts: groupBy both, count, and sort
+        result = (
+            self.df
+            .groupBy(col1, col2)
+            .count()
+            .orderBy(col1, col2)
+        )
+    else:
+        # Single-column counts: groupBy one, count, and sort
+        result = (
+            self.df
+            .groupBy(col1)
+            .count()
+            .orderBy(col1)
+        )
+
+    # convert to regular pandas before returning
+    return result.toPandas()
 
 
 
