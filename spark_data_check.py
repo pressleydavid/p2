@@ -50,6 +50,7 @@ class SparkDataCheck:
             inferSchema="true",
             header="true"
         )
+        df = df.drop("_c0")  # drop the unnamed index column if it exists
         return cls(df)
 
     @classmethod
@@ -61,7 +62,8 @@ class SparkDataCheck:
         Return:
             - SparkDataCheck: a new instance that wraps a DataFrame
         """
-        return spark.createDataFrame(pandas_df)
+        df = spark.createDataFrame(pandas_df)
+        return cls(df)
 
     # ----------------------------------------------------------------
     # Helper method for type checking
@@ -107,20 +109,6 @@ class SparkDataCheck:
     # Validation methods (modify self.df, return self for chaining)
     # ----------------------------------------------------------------
 
-    def drop_duplicates(self, subset=None):
-        """Drop duplicate rows from the DataFrame.
-        Parameters:
-            - subset (list of str, optional): Column names to consider for identifying duplicates.
-                If None, considers all columns.
-        Return:
-            - SparkDataCheck (self): duplicates dropped from self.df
-        """
-        if subset is not None:
-            self.df = self.df.dropDuplicates(subset)
-        else:
-            self.df = self.df.dropDuplicates()
-        return self
-
     def check_range(self, col_name, lower=None, upper=None):
         """Check if values in a numeric column fall within [lower, upper].
 
@@ -128,25 +116,23 @@ class SparkDataCheck:
         NULL values in the original column produce NULL in the result.
 
         Parameters
-        ----------
-        col_name : str
-            Name of the numeric column to check.
-        lower : numeric, optional
-            Lower bound (inclusive). If None, no lower bound check.
-        upper : numeric, optional
-            Upper bound (inclusive). If None, no upper bound check.
+            col_name : str
+                Name of the numeric column to check.
+            lower : numeric, optional
+                Lower bound (inclusive). If None, no lower bound check.
+            upper : numeric, optional
+                Upper bound (inclusive). If None, no upper bound check.
 
         Returns
-        -------
-        self
-            Returns self for method chaining.
+            self
+                Returns self for method chaining.
         """
         # At least one bound must be provided
         if lower is None and upper is None:
             print("At least one of lower or upper must be provided.")
             return self
 
-        # Check if column is numeric (inline)
+        # Check if column is numeric
         col_type = dict(self.df.dtypes).get(col_name, "")
         if col_type not in {"int", "bigint", "long", "float", "double", "integer"}:
             print(f"Column '{col_name}' is not numeric. No modification made.")
@@ -185,7 +171,7 @@ class SparkDataCheck:
             self
                 Returns self for method chaining.
         """
-        # Check if column is a string type (inline)
+        # Check if column is a string type
         col_type = dict(self.df.dtypes).get(col_name, "")
         if col_type != "string":
             print(f"Column '{col_name}' is not a string column. No modification made.")
@@ -285,25 +271,21 @@ class SparkDataCheck:
                 # build list of agg expressions for all numeric cols
                 agg_exprs = []
                 for c in numeric_cols:
-                    agg_exprs.append(F.min(c).alias(f"{c}_min"))
-                    agg_exprs.append(F.max(c).alias(f"{c}_max"))
+                    agg_exprs.append(F.min(F.col(f"`{c}`")).alias(f"{c}_min"))
+                    agg_exprs.append(F.max(F.col(f"`{c}`")).alias(f"{c}_max"))
 
                 # one .agg() call with all expressions, then toPandas
                 result = self.df.agg(*agg_exprs)
                 return result.toPandas()
 
             # case 2b: All numeric columns, with grouping
-            # tricky part from hint
-            # difficult to do one .agg() for all columns and keep
-            # so do one groupBy().agg() per column
-            # then merge the resulting pandas DataFrames together.
             else:
                 pandas_dfs = []
                 for c in numeric_cols:
                     # for each numeric column, groupBy and get min/max
                     agg_exprs = [
-                        F.min(c).alias(f"{c}_min"),
-                        F.max(c).alias(f"{c}_max")
+                        F.min(F.col(f"`{c}`")).alias(f"{c}_min"),
+                        F.max(F.col(f"`{c}`")).alias(f"{c}_max")
                     ]
                     one_result = (
                         self.df
