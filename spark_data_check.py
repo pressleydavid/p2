@@ -62,7 +62,7 @@ class SparkDataCheck:
         Return:
             - SparkDataCheck: a new instance that wraps a DataFrame
         """
-        df = spark.createDataFrame(pandas_df)
+        df= spark.createDataFrame(pandas_df)
         return cls(df)
 
     # ----------------------------------------------------------------
@@ -135,7 +135,7 @@ class SparkDataCheck:
         # Check if column is numeric
         col_type = dict(self.df.dtypes).get(col_name, "")
         if col_type not in {"int", "bigint", "long", "float", "double", "integer"}:
-            print(f"ERROR: Column '{col_name}' is not numeric. No modification made.")
+            print(f"Column '{col_name}' is not numeric. No modification made.")
             return self
 
         # Build the range condition
@@ -174,7 +174,7 @@ class SparkDataCheck:
         # Check if column is a string type
         col_type = dict(self.df.dtypes).get(col_name, "")
         if col_type != "string":
-            print(f"ERROR: Column '{col_name}' is not a string column. No modification made.")
+            print(f"Column '{col_name}' is not a string column. No modification made.")
             return self
 
         # Build the condition
@@ -232,7 +232,7 @@ class SparkDataCheck:
             # Check if column is numeric
             col_type = dict(self.df.dtypes).get(col_name, "")
             if col_type not in {"int", "bigint", "long", "float", "double", "integer"}:
-                print(f"ERROR: Column '{col_name}' is not numeric.")
+                print(f"Column '{col_name}' is not numeric.")
                 return None
 
             # Build the aggregation expressions using F.min and F.max
@@ -263,7 +263,7 @@ class SparkDataCheck:
 
             # no numeric columns exist
             if len(numeric_cols) == 0:
-                print("INFO: No numeric columns found in the DataFrame.")
+                print("No numeric columns found in the DataFrame.")
                 return None
 
             # case 2a: All numeric columns, no grouping
@@ -322,14 +322,14 @@ class SparkDataCheck:
         # check if col1 is a string column
         col1_type = dict(self.df.dtypes).get(col1, "")
         if col1_type != "string":
-            print(f"ERROR: Column '{col1}' is not a string column.")
+            print(f"Column '{col1}' is not a string column.")
             return None
 
         # if col2 was provided, check that one too
         if col2 is not None:
             col2_type = dict(self.df.dtypes).get(col2, "")
             if col2_type != "string":
-                print(f"ERROR: Column '{col2}' is not a string column.")
+                print(f"Column '{col2}' is not a string column.")
                 return None
 
             # two-column counts: groupBy both, count, and sort
